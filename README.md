@@ -3,6 +3,8 @@
 ## 🔍 Overview  
 **Safext** is a simple yet effective solution to prevent unauthorized peeking at your screen while writing or texting. It encrypts your text using a basic **Shift Cipher**, making it unreadable for shoulder-surfers while still allowing you to type naturally. Note that this is a prototype.
 
+![safext](./safext.png)
+
 ## 🚀 Features  
 ✅ **Reduces Text Readability** - Converts readable text into a unreadable format using a shift cipher. This makes text look like gibberish.
 
