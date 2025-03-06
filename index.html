@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png">
+    <link rel="icon" type="image/png" href="favicon.png">
+
+    <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
+
+    <link rel="icon" type="image/png" sizes="192x192" href="android-chrome-192x192.png">
+    <link rel="icon" type="image/png" sizes="512x512" href="android-chrome-512x512.png">
+
+    <link rel="manifest" href="site.webmanifest">
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <title>Safext</title>
+    <style>
+        /* Subtle Glow Effect */
+        .glow-hover {
+            transition: text-shadow 0.2s ease-in-out;
+        }
+        .glow-hover:hover {
+            text-shadow: 0 0 5px #3b82f6, 0 0 10px #3b82f6;
+        }
+        /* Modal Styles */
+        .modal {
+            display: none;
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-gray-300 flex flex-col items-center min-h-screen p-5">
+
+
+    <nav class="bg-gray-950 w-full p-4 flex justify-between items-center shadow-lg">
+        <h1 class="text-3xl font-extrabold text-blue-500 tracking-wide glow-hover">
+            Safext
+        </h1>
+        <div class="flex gap-4">
+            <button id="openKeyModal" class="flex items-center justify-center min-w-[32px] min-h-[32px] max-w-[48px] max-h-[48px] p-2 rounded-md">
+                <img src="./safeWrite.png" class="w-full h-full object-contain" alt="key">
+            </button>
+
+            <input type="file" id="fileInput" accept=".txt" class="hidden">
+
+            <button onclick="document.getElementById('fileInput').click()" 
+                class="flex items-center justify-center min-w-[32px] min-h-[32px] max-w-[48px] max-h-[48px] p-2 rounded-md">
+                <img src="./upload.png" class="w-full h-full object-contain" alt="upload">
+            </button>
+
+            <button id="downloadBtn" class="flex items-center justify-center min-w-[32px] min-h-[32px] max-w-[48px] max-h-[48px] p-2 rounded-md">
+                <img src="./download.png" class="w-full h-full object-contain" alt="download">
+            </button>
+        </div>
+    </nav>
+
+
+    <textarea id="textInput" placeholder="Type here..."
+        class="w-full flex-grow min-h-0 p-4 bg-gray-800 text-white border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+        rows="6"></textarea>
+
+
+    <div id="keyModal" class="modal fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
+        <div class="bg-gray-800 p-6 rounded-lg shadow-lg">
+            <h2 class="text-xl font-bold text-white">Enter Encoding Key</h2>
+            <input type="number" id="keyInput"
+                class="w-full mt-3 p-2 bg-gray-700 text-white border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Enter a number (positive or negative)">
+            <div class="flex justify-end mt-4 gap-2">
+                <button id="closeKeyModal" class="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700">Cancel</button>
+                <button id="applyKey" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">Apply</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        (function () {
+            let secretKey = 0; 
+
+            function setKey(newKey) {
+                secretKey = newKey;
+            }
+
+            function getKey() {
+                return secretKey;
+            }
+
+            function shiftChar(char, key) {
+                let ascii = char.charCodeAt(0);
+                if (ascii >= 32 && ascii <= 126) {
+                    let adjustedKey = ((key % 95) + 95) % 95; 
+                    return String.fromCharCode(((ascii - 32 + adjustedKey) % 95) + 32);
+                }
+                return char;
+            }
+
+
+            function transformText(text, key) {
+                return [...text].map(char => shiftChar(char, key)).join('');
+            }
+
+            const inputField = document.getElementById("textInput");
+            const fileInput = document.getElementById("fileInput");
+            const downloadBtn = document.getElementById("downloadBtn");
+            const openKeyModal = document.getElementById("openKeyModal");
+            const closeKeyModal = document.getElementById("closeKeyModal");
+            const applyKeyBtn = document.getElementById("applyKey");
+            const keyModal = document.getElementById("keyModal");
+            const keyInput = document.getElementById("keyInput");
+
+            openKeyModal.addEventListener("click", () => {
+                keyModal.style.display = "flex";
+            });
+
+            closeKeyModal.addEventListener("click", () => {
+                keyModal.style.display = "none";
+            });
+
+            applyKeyBtn.addEventListener("click", () => {
+                const newKey = parseInt(keyInput.value, 10);
+                if (!isNaN(newKey)) {
+                    setKey(newKey);
+                    inputField.value = transformText(inputField.value, getKey());
+                }
+                keyInput.value=""
+                keyModal.style.display = "none";
+            });
+
+            inputField.addEventListener("beforeinput", (event) => {
+                if (event.data && event.inputType.startsWith("insert")) {
+                    event.preventDefault();
+                    let transformedChar = shiftChar(event.data, getKey());
+                    document.execCommand("insertText", false, transformedChar);
+                }
+            });
+
+            inputField.addEventListener("paste", (event) => {
+                event.preventDefault();
+                let pasteData = (event.clipboardData || window.clipboardData).getData("text");
+                let transformedText = transformText(pasteData, getKey());
+
+                let cursorPos = inputField.selectionStart;
+                let textBeforeCursor = inputField.value.slice(0, cursorPos);
+                let textAfterCursor = inputField.value.slice(inputField.selectionEnd);
+
+                inputField.value = textBeforeCursor + transformedText + textAfterCursor;
+            });
+
+            downloadBtn.addEventListener("click", () => {
+                const text = inputField.value;
+                const blob = new Blob([text], { type: "text/plain" });
+                const link = document.createElement("a");
+                link.href = URL.createObjectURL(blob);
+                link.download = "safext_text.txt";
+                link.click();
+            });
+
+            fileInput.addEventListener("change", (event) => {
+                const file = event.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = function (e) {
+                        inputField.value = e.target.result;
+                    };
+                    reader.readAsText(file);
+                }
+            });
+
+        })();
+    </script>
+
+</body>
+</html>
